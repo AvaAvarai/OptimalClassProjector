@@ -61,3 +61,7 @@ Where W\* represents the optimal coefficients for separating the classes.
 - Projection and Visualization
 
 Once the optimal coefficients W\* are found, the data is projected onto the 1D space defined by W\*, and the separation of the classes is visualized in the projected space.
+
+## License
+
+This project is freely available for personal and commerical use under the MIT license, see `LICENSE` for full details.
