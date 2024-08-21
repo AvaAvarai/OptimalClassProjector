@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from tkinter import Tk, filedialog
 
 def select_csv_file():
@@ -83,9 +83,15 @@ def project_and_plot(X, y, W_optimal, class_names):
     conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
     accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
     
+    # Calculate precision and recall
+    precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
+    recall = recall_score(y, predictions, labels=unique_classes, average='weighted')
+    
     print("Confusion Matrix:")
     print(conf_matrix)
     print(f"Accuracy: {accuracy:.4f} = {accuracy * 100:.2f}%")
+    print(f"Precision: {precision:.4f} = {precision * 100:.2f}%")
+    print(f"Recall: {recall:.4f} = {recall * 100:.2f}%")
 
 def main():
     # Select the CSV file
