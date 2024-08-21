@@ -55,7 +55,7 @@ def optimize_coefficients(X, y):
     return result.x
 
 def project_and_plot(X, y, W_optimal, class_names):
-    """Projects the data using the optimized coefficients and plots the result."""
+    """Projects the data using the optimized coefficients and plots the result with subspace boundaries."""
     XW = X @ W_optimal.reshape((-1, 1))
 
     plt.figure(figsize=(10, 6))
@@ -63,7 +63,12 @@ def project_and_plot(X, y, W_optimal, class_names):
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
     for i, color in zip(unique_classes, colors):
-        plt.scatter(XW[y == i], np.zeros_like(XW[y == i]) + i, color=color, label=class_names[i])
+        class_projection = XW[y == i]
+        plt.scatter(class_projection, np.zeros_like(class_projection) + i, color=color, label=class_names[i])
+        
+        # Draw lines at the beginning and end of each class's subspace
+        plt.axvline(x=class_projection.min(), color=color, linestyle='--', linewidth=1)
+        plt.axvline(x=class_projection.max(), color=color, linestyle='--', linewidth=1)
 
     plt.title('Projection of Dataset Using Combined Optimized Coefficients')
     plt.xlabel('Projected Value')
