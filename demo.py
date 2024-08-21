@@ -81,8 +81,11 @@ def project_and_plot(X, y, W_optimal, class_names):
     
     # Calculate and print the confusion matrix
     conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
+    accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
+    
     print("Confusion Matrix:")
     print(conf_matrix)
+    print(f"Accuracy: {accuracy:.4f} = {accuracy * 100:.2f}%")
 
 def main():
     # Select the CSV file
