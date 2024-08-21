@@ -1,11 +1,10 @@
-# Demo of optimizing coefficients for class separation using a combined objective function of inter-class distance and intra-class variance
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-from tkinter import Tk, filedialog
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import confusion_matrix
+from tkinter import Tk, filedialog
 
 def select_csv_file():
     """Opens a file picker to select a CSV file."""
@@ -75,6 +74,15 @@ def project_and_plot(X, y, W_optimal, class_names):
     plt.yticks(range(len(unique_classes)), class_names)
     plt.legend()
     plt.show()
+
+    # Predict the class by finding the closest centroid
+    centroids = np.array([XW[y == i].mean() for i in unique_classes])
+    predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
+    
+    # Calculate and print the confusion matrix
+    conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
+    print("Confusion Matrix:")
+    print(conf_matrix)
 
 def main():
     # Select the CSV file
