@@ -12,7 +12,7 @@ def select_csv_file():
     root = Tk()
     root.withdraw()  # Hide the main window
     file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
-    root.destroy()
+    root.destroy()  # Close the file picker
     return file_path
 
 def load_csv(file_path):
@@ -63,7 +63,7 @@ def project_and_plot(X, y, W_optimal, class_names):
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
     for i, color in zip(unique_classes, colors):
-        plt.scatter(XW[y == i], np.zeros_like(XW[y == i]) + i, c=color, label=class_names[i])
+        plt.scatter(XW[y == i], np.zeros_like(XW[y == i]) + i, color=color, label=class_names[i])
 
     plt.title('Projection of Dataset Using Combined Optimized Coefficients')
     plt.xlabel('Projected Value')
