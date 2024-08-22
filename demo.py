@@ -75,9 +75,23 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
 
     centroids = np.array([XW[y == i].mean() for i in unique_classes])
 
+    # Predictions and identification of misclassified points
+    predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
+    misclassified = predictions != y
+
     for i, color in zip(unique_classes, colors):
         class_projection = XW[y == i]
-        ax.scatter(class_projection, np.zeros_like(class_projection) + i, color=color, label=class_names[i])
+
+        # Correctly classified points
+        ax.scatter(class_projection[~misclassified[y == i]], 
+                   np.zeros_like(class_projection[~misclassified[y == i]]) + i, 
+                   color=color, label=class_names[i])
+
+        # Misclassified points with the same class color but marked with 'x'
+        ax.scatter(class_projection[misclassified[y == i]], 
+                   np.zeros_like(class_projection[misclassified[y == i]]) + i, 
+                   color=color, marker='x', s=100, linewidths=2, 
+                   label=f'Misclassified {class_names[i]}')
 
         ax.axvline(x=class_projection.min(), color=color, linestyle='--', linewidth=1)
         ax.axvline(x=class_projection.max(), color=color, linestyle='--', linewidth=1)
@@ -93,7 +107,6 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
     canvas.draw()
     canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=True)
 
-    predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
     conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
     accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
     precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
