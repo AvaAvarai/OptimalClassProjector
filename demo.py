@@ -54,20 +54,26 @@ def optimize_coefficients(X, y):
     return result.x
 
 def project_and_plot(X, y, W_optimal, class_names):
-    """Projects the data using the optimized coefficients and plots the result with subspace boundaries."""
+    """Projects the data using the optimized coefficients and plots the result with subspace boundaries and centroids."""
     XW = X @ W_optimal.reshape((-1, 1))
 
     plt.figure(figsize=(10, 6))
     unique_classes = np.unique(y)
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
+    # Calculate centroids
+    centroids = np.array([XW[y == i].mean() for i in unique_classes])
+
     for i, color in zip(unique_classes, colors):
         class_projection = XW[y == i]
         plt.scatter(class_projection, np.zeros_like(class_projection) + i, color=color, label=class_names[i])
-        
+
         # Draw lines at the beginning and end of each class's subspace
         plt.axvline(x=class_projection.min(), color=color, linestyle='--', linewidth=1)
         plt.axvline(x=class_projection.max(), color=color, linestyle='--', linewidth=1)
+
+        # Draw centroid
+        plt.scatter(centroids[i], i, color='black', marker='x', s=100, linewidths=2, label=f'Centroid of {class_names[i]}')
 
     plt.title('Projection of Dataset Using Combined Optimized Coefficients')
     plt.xlabel('Projected Value')
@@ -76,17 +82,16 @@ def project_and_plot(X, y, W_optimal, class_names):
     plt.show()
 
     # Predict the class by finding the closest centroid
-    centroids = np.array([XW[y == i].mean() for i in unique_classes])
     predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
-    
+
     # Calculate and print the confusion matrix
     conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
     accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
-    
+
     # Calculate precision and recall
     precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
     recall = recall_score(y, predictions, labels=unique_classes, average='weighted')
-    
+
     print("Confusion Matrix:")
     print(conf_matrix)
     print(f"Accuracy: {accuracy:.4f} = {accuracy * 100:.2f}%")
