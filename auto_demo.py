@@ -148,13 +148,19 @@ def process_all_csvs_in_folder(folder_path, output_folder):
             centroids = np.array([XW[y == i].mean() for i in np.unique(y)])
             predictions = np.array([np.argmin(np.abs(x - centroids)) for x in XW])
             conf_matrix = confusion_matrix(y, predictions, labels=np.unique(y))
+            
+            # Handle cases where a class has no predicted samples
+            precision = precision_score(y, predictions, labels=np.unique(y), average='weighted', zero_division=0)
+            recall = recall_score(y, predictions, labels=np.unique(y), average='weighted', zero_division=0)
+
             accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
-            precision = precision_score(y, predictions, labels=np.unique(y), average='weighted')
-            recall = recall_score(y, predictions, labels=np.unique(y), average='weighted')
 
             save_plot_and_stats(file_name, conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, centroids, class_names, output_folder, X, y)
 
-            summary_stats.append([file_name, accuracy, precision, recall])
+            summary_stats.append([file_name, f"{accuracy:.2%}", f"{precision:.2%}", f"{recall:.2%}"])
+
+    # Sort the summary stats by file name
+    summary_stats = sorted(summary_stats, key=lambda x: x[0])
 
     # Save summary of all CSVs
     summary_df = pd.DataFrame(summary_stats, columns=['File Name', 'Accuracy', 'Precision', 'Recall'])
