@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy.optimize import minimize
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
-from tkinter import Tk, filedialog
+from tkinter import Tk, filedialog, Frame, Label, TOP, BOTH, BOTTOM
 
 def select_csv_file():
     """Opens a file picker to select a CSV file."""
@@ -20,30 +21,20 @@ def load_csv(file_path):
 
 def find_class_column(df):
     """Finds the column in the DataFrame that corresponds to the class labels."""
-    class_column = None
     for column in df.columns:
         if column.lower() == 'class':
-            class_column = column
-            break
-    if class_column is None:
-        raise ValueError("No column named 'class' found in the CSV.")
-    return class_column
+            return column
+    raise ValueError("No column named 'class' found in the CSV.")
 
 def combined_objective_function(W, X, y, alpha=1.0, beta=1.0):
     """Objective function to maximize inter-class distance and minimize intra-class variance."""
     W = W.reshape((-1, 1))
     XW = X @ W
     
-    # Calculate the class centroids in the projected space
     centroids = np.array([XW[y == i].mean() for i in np.unique(y)])
-    
-    # Inter-class distance: Minimize the negative of the minimum distance between centroids
     inter_class_distance = np.min([np.abs(centroids[i] - centroids[j]) for i in range(len(centroids)) for j in range(len(centroids)) if i != j])
-    
-    # Intra-class compactness: Sum of variances within each class
     intra_class_variance = np.sum([np.var(XW[y == i]) for i in np.unique(y)])
     
-    # Combined objective: Maximize inter-class distance and minimize intra-class variance
     return -alpha * inter_class_distance + beta * intra_class_variance
 
 def optimize_coefficients(X, y):
@@ -53,66 +44,73 @@ def optimize_coefficients(X, y):
     result = minimize(combined_objective_function, W0, args=(X, y, 1.0, 1.0), constraints=[{'type': 'eq', 'fun': lambda W: np.linalg.norm(W) - 1}])
     return result.x
 
-def project_and_plot(X, y, W_optimal, class_names):
-    """Projects the data using the optimized coefficients and plots the result with subspace boundaries and centroids."""
+def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, root):
+    """Displays the confusion matrix and stats in a Tkinter window."""
+    stats_frame = Frame(root)
+    stats_frame.pack(side=BOTTOM, fill=BOTH, expand=True)
+
+    matrix_str = "Confusion Matrix:\n"
+    for row in conf_matrix:
+        matrix_str += " ".join(f"{val:4d}" for val in row) + "\n"
+
+    stats_str = (
+        f"\nAccuracy: {accuracy:.4f} = {accuracy * 100:.2f}%\n"
+        f"Precision: {precision:.4f} = {precision * 100:.2f}%\n"
+        f"Recall: {recall:.4f} = {recall * 100:.2f}%\n"
+    )
+
+    Label(stats_frame, text=matrix_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
+    Label(stats_frame, text=stats_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
+
+def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
+    """Projects the data using the optimized coefficients and plots the result with subspace boundaries and centroids in a Tkinter window."""
     XW = X @ W_optimal.reshape((-1, 1))
 
-    plt.figure(figsize=(10, 6))
+    plot_frame = Frame(root)
+    plot_frame.pack(side=TOP, fill=BOTH, expand=False)
+
+    fig, ax = plt.subplots(figsize=(10, 4))  # Reduced height
     unique_classes = np.unique(y)
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
-    # Calculate centroids
     centroids = np.array([XW[y == i].mean() for i in unique_classes])
 
     for i, color in zip(unique_classes, colors):
         class_projection = XW[y == i]
-        plt.scatter(class_projection, np.zeros_like(class_projection) + i, color=color, label=class_names[i])
+        ax.scatter(class_projection, np.zeros_like(class_projection) + i, color=color, label=class_names[i])
 
-        # Draw lines at the beginning and end of each class's subspace
-        plt.axvline(x=class_projection.min(), color=color, linestyle='--', linewidth=1)
-        plt.axvline(x=class_projection.max(), color=color, linestyle='--', linewidth=1)
+        ax.axvline(x=class_projection.min(), color=color, linestyle='--', linewidth=1)
+        ax.axvline(x=class_projection.max(), color=color, linestyle='--', linewidth=1)
+        ax.scatter(centroids[i], i, color='black', marker='x', s=100, linewidths=2, label=f'Centroid of {class_names[i]}')
 
-        # Draw centroid
-        plt.scatter(centroids[i], i, color='black', marker='x', s=100, linewidths=2, label=f'Centroid of {class_names[i]}')
+    ax.set_title('Projection of Dataset Using Combined Optimized Coefficients')
+    ax.set_xlabel('Projected Value')
+    ax.set_yticks(range(len(unique_classes)))
+    ax.set_yticklabels(class_names)
+    ax.legend()
 
-    plt.title('Projection of Dataset Using Combined Optimized Coefficients')
-    plt.xlabel('Projected Value')
-    plt.yticks(range(len(unique_classes)), class_names)
-    plt.legend()
-    plt.show()
+    canvas = FigureCanvasTkAgg(fig, master=plot_frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=True)
 
-    # Predict the class by finding the closest centroid
     predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
-
-    # Calculate and print the confusion matrix
     conf_matrix = confusion_matrix(y, predictions, labels=unique_classes)
     accuracy = np.trace(conf_matrix) / np.sum(conf_matrix)
-
-    # Calculate precision and recall
     precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
     recall = recall_score(y, predictions, labels=unique_classes, average='weighted')
 
-    print("Confusion Matrix:")
-    print(conf_matrix)
-    print(f"Accuracy: {accuracy:.4f} = {accuracy * 100:.2f}%")
-    print(f"Precision: {precision:.4f} = {precision * 100:.2f}%")
-    print(f"Recall: {recall:.4f} = {recall * 100:.2f}%")
+    display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, root)
 
 def main():
-    # Select the CSV file
     file_path = select_csv_file()
     if not file_path:
         print("No file selected. Exiting...")
         return
     
-    # Load the CSV file
     df = load_csv(file_path)
-    
-    # Identify the class column and prepare the data
     class_column = find_class_column(df)
     y = df[class_column].values
     
-    # Convert class labels to numeric values if they are not already integers
     if not np.issubdtype(y.dtype, np.number):
         label_encoder = LabelEncoder()
         y = label_encoder.fit_transform(y)
@@ -121,12 +119,12 @@ def main():
         class_names = np.unique(y)
     
     X = df.drop(columns=[class_column]).values
-    
-    # Optimize the coefficients
     W_optimal = optimize_coefficients(X, y)
     
-    # Project the data and plot the result
-    project_and_plot(X, y, W_optimal, class_names)
+    root = Tk()
+    root.title("Optimal Class Projector")
+    project_and_plot_tkinter(X, y, W_optimal, class_names, root)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
