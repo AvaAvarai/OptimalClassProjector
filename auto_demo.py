@@ -96,12 +96,27 @@ def save_plot_and_stats(file_name, conf_matrix, accuracy, precision, recall, W_o
     with open(os.path.join(output_folder, f'{file_name}_stats.txt'), 'w') as f:
         f.write("Confusion Matrix:\n")
         f.write(np.array2string(conf_matrix) + "\n\n")
-        f.write(f"Accuracy: {accuracy:.4f}\n")
-        f.write(f"Precision: {precision:.4f}\n")
-        f.write(f"Recall: {recall:.4f}\n")
+        f.write(f"Accuracy: {accuracy:.2%}\n")
+        f.write(f"Precision: {precision:.2%}\n")
+        f.write(f"Recall: {recall:.2%}\n")
 
         linear_combo = ' + '.join([f'{round(w, 4)}*{attr}' for w, attr in zip(W_optimal, attribute_names)])
         f.write(f"Linear Combination (W * X):\n{linear_combo}\n\n")
+
+        # Write out the classifier ranges
+        classifier_str = "Classifier:\n"
+        sorted_centroids = sorted(centroids)
+        
+        for i in range(len(sorted_centroids)):
+            if i == 0:
+                classifier_str += f"If 0 <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
+            else:
+                if i < len(sorted_centroids) - 1:
+                    classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
+                else:
+                    classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo}, then class = {class_names[i]}\n"
+
+        f.write(f"\n{classifier_str}")
 
 def process_all_csvs_in_folder(folder_path, output_folder):
     """Processes all CSV files in the selected folder and saves results to the output folder."""
