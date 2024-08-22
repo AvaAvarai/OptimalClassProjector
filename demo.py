@@ -6,6 +6,7 @@ from scipy.optimize import minimize
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from tkinter import Tk, filedialog, Frame, Label, TOP, BOTH, BOTTOM
+from tkinter import HORIZONTAL, Y, X, BOTH, RIGHT, BOTTOM, Scrollbar, Canvas, Frame, Label
 
 def select_csv_file():
     """Opens a file picker to select a CSV file."""
@@ -45,31 +46,43 @@ def optimize_coefficients(X, y):
     return result.x
 
 def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, centroids, class_names, root):
-    """Displays the confusion matrix, stats, coefficients, and classifier in a Tkinter window."""
-    stats_frame = Frame(root)
-    stats_frame.pack(side=BOTTOM, fill=BOTH, expand=True)
+    canvas = Canvas(root)
+    canvas.pack(side=TOP, fill=BOTH, expand=True)
+
+    v_scrollbar = Scrollbar(root, orient="vertical", command=canvas.yview)
+    h_scrollbar = Scrollbar(root, orient=HORIZONTAL, command=canvas.xview)
+    
+    canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+    stats_frame = Frame(canvas)
+    canvas.create_window((0, 0), window=stats_frame, anchor="nw")
+
+    def on_frame_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    def _on_mouse_wheel(event):
+        canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+    stats_frame.bind("<Configure>", on_frame_configure)
+    canvas.bind_all("<MouseWheel>", _on_mouse_wheel)
 
     matrix_str = "Confusion Matrix:\n"
     for row in conf_matrix:
         matrix_str += " ".join(f"{val:4d}" for val in row) + "\n"
 
-    # Construct the linear combination string
     linear_combo = " + ".join([f"{round(coef, 4)}*{attr}" for coef, attr in zip(W_optimal.flatten(), attribute_names)])
 
-    # Define the classifier based on separation lines
     classifier_str = "Classifier:\n"
     sorted_centroids = sorted(centroids)
     
-    # First class: from 0 up to the first separation line
-    classifier_str += f"If 0 <= {linear_combo} < {sorted_centroids[0]:.4f}, then class = {class_names[0]}\n"
-
-    # Middle classes: for each middle centroid, define a range between previous and current
-    for i in range(1, len(sorted_centroids)):
-        if i < len(sorted_centroids) - 1:
-            classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
+    for i in range(len(sorted_centroids)):
+        if i == 0:
+            classifier_str += f"If 0 <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
         else:
-            # Last class: everything greater than or equal to the last separation line
-            classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo}, then class = {class_names[i]}\n"
+            if i < len(sorted_centroids) - 1:
+                classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
+            else:
+                classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo}, then class = {class_names[i]}\n"
 
     stats_str = (
         f"\nAccuracy: {accuracy:.4f} = {accuracy * 100:.2f}%\n"
@@ -81,6 +94,9 @@ def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall,
 
     Label(stats_frame, text=matrix_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
     Label(stats_frame, text=stats_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
+
+    v_scrollbar.pack(side=RIGHT, fill=Y)
+    h_scrollbar.pack(side=BOTTOM, fill=X)
 
 def project_and_plot_tkinter(X, y, W_optimal, class_names, attribute_names, root):
     """Projects the data using the optimized coefficients and plots the result with subspace boundaries and centroids in a Tkinter window."""
