@@ -74,12 +74,13 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
     centroids = np.array([XW[y == i].mean() for i in unique_classes])
+    sorted_indices = np.argsort(centroids)  # Sort centroids
+    sorted_centroids = centroids[sorted_indices]
 
-    # Draw separation lines between each pair of centroids
-    for i in range(len(centroids)):
-        for j in range(i + 1, len(centroids)):
-            midpoint = (centroids[i] + centroids[j]) / 2
-            ax.axvline(x=midpoint, color='gray', linestyle=':', linewidth=1, label='Separation Line')
+    # Draw separation lines between nearest centroids (n-1 lines)
+    for i in range(len(sorted_centroids) - 1):
+        midpoint = (sorted_centroids[i] + sorted_centroids[i + 1]) / 2
+        ax.axvline(x=midpoint, color='gray', linestyle=':', linewidth=1, label='Separation Line')
 
     # Predictions and identification of misclassified points
     predictions = np.array([unique_classes[np.argmin(np.abs(x - centroids))] for x in XW])
