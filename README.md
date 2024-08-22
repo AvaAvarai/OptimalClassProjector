@@ -5,6 +5,9 @@ Demo of optimizing coefficients for class separation using a combined objective 
 Iris 1-D resultant projection:
 ![Iris Projetion Demo](iris_demo.png)
 
+Iris 3-D Parallel Corodinates visualization:
+![Iris 3D Demo](Iris_demo_3d.png)
+
 ## Mathematical Process
 
 - Problem Definition
