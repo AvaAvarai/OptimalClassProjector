@@ -44,8 +44,8 @@ def optimize_coefficients(X, y):
     result = minimize(combined_objective_function, W0, args=(X, y, 1.0, 1.0), constraints=[{'type': 'eq', 'fun': lambda W: np.linalg.norm(W) - 1}])
     return result.x
 
-def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, root):
-    """Displays the confusion matrix, stats, and coefficients in a Tkinter window."""
+def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, centroids, class_names, root):
+    """Displays the confusion matrix, stats, coefficients, and classifier in a Tkinter window."""
     stats_frame = Frame(root)
     stats_frame.pack(side=BOTTOM, fill=BOTH, expand=True)
 
@@ -56,11 +56,27 @@ def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall,
     # Construct the linear combination string
     linear_combo = " + ".join([f"{round(coef, 4)}*{attr}" for coef, attr in zip(W_optimal.flatten(), attribute_names)])
 
+    # Define the classifier based on separation lines
+    classifier_str = "Classifier:\n"
+    sorted_centroids = sorted(centroids)
+    
+    # First class: from 0 up to the first separation line
+    classifier_str += f"If 0 <= {linear_combo} < {sorted_centroids[0]:.4f}, then class = {class_names[0]}\n"
+
+    # Middle classes: for each middle centroid, define a range between previous and current
+    for i in range(1, len(sorted_centroids)):
+        if i < len(sorted_centroids) - 1:
+            classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo} < {sorted_centroids[i]:.4f}, then class = {class_names[i]}\n"
+        else:
+            # Last class: everything greater than or equal to the last separation line
+            classifier_str += f"If {sorted_centroids[i-1]:.4f} <= {linear_combo}, then class = {class_names[i]}\n"
+
     stats_str = (
         f"\nAccuracy: {accuracy:.4f} = {accuracy * 100:.2f}%\n"
         f"Precision: {precision:.4f} = {precision * 100:.2f}%\n"
         f"Recall: {recall:.4f} = {recall * 100:.2f}%\n"
-        f"Linear Combination (W * X):\n{linear_combo}\n"  # Display the linear combination
+        f"Linear Combination (W * X):\n{linear_combo}\n"
+        f"\n{classifier_str}"
     )
 
     Label(stats_frame, text=matrix_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
@@ -78,8 +94,7 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, attribute_names, root
     colors = plt.cm.jet(np.linspace(0, 1, len(unique_classes)))
 
     centroids = np.array([XW[y == i].mean() for i in unique_classes])
-    sorted_indices = np.argsort(centroids)  # Sort centroids
-    sorted_centroids = centroids[sorted_indices]
+    sorted_centroids = sorted(centroids)
 
     # Draw separation lines between nearest centroids (n-1 lines)
     for i in range(len(sorted_centroids) - 1):
@@ -123,7 +138,7 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, attribute_names, root
     precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
     recall = recall_score(y, predictions, labels=unique_classes, average='weighted')
 
-    display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, root)
+    display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, attribute_names, centroids, class_names, root)
 
 def main():
     file_path = select_csv_file()
@@ -134,7 +149,7 @@ def main():
     df = load_csv(file_path)
     class_column = find_class_column(df)
     y = df[class_column].values
-    attribute_names = df.drop(columns=[class_column]).columns
+    attribute_names = df.drop(columns=[class_column]).columns  # Get attribute names
     
     if not np.issubdtype(y.dtype, np.number):
         label_encoder = LabelEncoder()
