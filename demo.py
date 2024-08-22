@@ -62,6 +62,25 @@ def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall,
     Label(stats_frame, text=matrix_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
     Label(stats_frame, text=stats_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
 
+def display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, root):
+    """Displays the confusion matrix, stats, and coefficients in a Tkinter window."""
+    stats_frame = Frame(root)
+    stats_frame.pack(side=BOTTOM, fill=BOTH, expand=True)
+
+    matrix_str = "Confusion Matrix:\n"
+    for row in conf_matrix:
+        matrix_str += " ".join(f"{val:4d}" for val in row) + "\n"
+
+    stats_str = (
+        f"\nAccuracy: {accuracy:.4f} = {accuracy * 100:.2f}%\n"
+        f"Precision: {precision:.4f} = {precision * 100:.2f}%\n"
+        f"Recall: {recall:.4f} = {recall * 100:.2f}%\n"
+        f"Coefficients (W): {W_optimal.flatten()}\n"  # Display the coefficients
+    )
+
+    Label(stats_frame, text=matrix_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
+    Label(stats_frame, text=stats_str, justify='left', font=("Helvetica", 12)).pack(side=TOP, anchor="w")
+
 def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
     """Projects the data using the optimized coefficients and plots the result with subspace boundaries and centroids in a Tkinter window."""
     XW = X @ W_optimal.reshape((-1, 1))
@@ -119,7 +138,7 @@ def project_and_plot_tkinter(X, y, W_optimal, class_names, root):
     precision = precision_score(y, predictions, labels=unique_classes, average='weighted')
     recall = recall_score(y, predictions, labels=unique_classes, average='weighted')
 
-    display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, root)
+    display_confusion_matrix_and_stats(conf_matrix, accuracy, precision, recall, W_optimal, root)
 
 def main():
     file_path = select_csv_file()
